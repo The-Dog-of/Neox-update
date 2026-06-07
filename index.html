@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeoX Studio | Play the Future</title>
+    <meta name="description" content="NeoX was born to break the monotony. We create digital amusement parks where every pixel is designed to make you smile.">
+    <meta name="theme-color" content="#00e5ff">
+    <link rel="icon" type="image/png" href="assets/NeoX.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="static/style.css">
+    <style>
+/* ===================== VARIABLES ===================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --cyan: #00e5ff; --pink: #ff0055; --yellow: #ffe600;
+    --dark: #05050f; --dark2: #0a0a18;
+    --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.08);
+    --text: rgba(255,255,255,0.85); --muted: rgba(255,255,255,0.45);
+}
+html { scroll-behavior: smooth; }
+body { background: var(--dark); color: var(--text); font-family: 'Outfit', sans-serif; overflow-x: hidden; cursor: none; }
+body.loaded #preloader { opacity: 0; pointer-events: none; }
+::selection { background: rgba(0,229,255,0.25); color: #fff; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #05050f; }
+::-webkit-scrollbar-thumb { background: linear-gradient(to bottom,var(--cyan),var(--pink)); border-radius: 99px; }
+*:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+section[id] { scroll-margin-top: 90px; }
+
+/* ===================== CURSOR ===================== */
+#cursor-dot, #cursor-ring { position:fixed; border-radius:50%; pointer-events:none; z-index:99999; }
+#cursor-dot { width:8px; height:8px; background:var(--cyan); top:-4px; left:-4px; box-shadow:0 0 10px var(--cyan); transition:width .2s,height .2s,background .2s; }
+#cursor-ring { width:36px; height:36px; border:2px solid rgba(0,229,255,.5); top:-18px; left:-18px; }
+@media(max-width:768px){ #cursor-dot,#cursor-ring{display:none} body{cursor:auto} }
+
+/* ===================== PRELOADER ===================== */
+#preloader { position:fixed; inset:0; background:var(--dark); z-index:99997; display:flex; align-items:center; justify-content:center; flex-direction:column; transition:opacity .6s .2s; }
+.preloader-logo { font-family:'Orbitron',sans-serif; font-size:clamp(3rem,8vw,6rem); font-weight:900; background:linear-gradient(90deg,var(--cyan),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:glitchPulse 1.2s infinite; margin-bottom:2rem; }
+@keyframes glitchPulse { 0%,100%{filter:drop-shadow(0 0 20px rgba(0,229,255,.5))} 50%{filter:drop-shadow(0 0 40px rgba(255,0,85,.5))} }
+.preloader-bar { width:200px; height:3px; background:rgba(255,255,255,.1); border-radius:99px; overflow:hidden; }
+.preloader-progress { height:100%; background:linear-gradient(90deg,var(--cyan),var(--pink)); border-radius:99px; width:0%; transition:width .1s; box-shadow:0 0 10px var(--cyan); }
+.preloader-pct { font-family:'Orbitron',sans-serif; font-size:.8rem; color:var(--muted); margin-top:.8rem; letter-spacing:3px; }
+
+/* ===================== LAYOUT ===================== */
+.container { max-width:1200px; margin:0 auto; padding:0 2rem; }
+.section-eyebrow { font-family:'Orbitron',sans-serif; font-size:.7rem; letter-spacing:4px; color:var(--cyan); text-transform:uppercase; margin-bottom:.8rem; display:flex; align-items:center; gap:.6rem; }
+.section-eyebrow::before { content:''; width:24px; height:2px; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+.section-title { font-family:'Orbitron',sans-serif; font-size:clamp(1.8rem,4vw,2.8rem); font-weight:900; line-height:1.1; margin-bottom:1rem; }
+.section-subtitle { color:var(--muted); font-size:1rem; line-height:1.7; max-width:560px; }
+.grad { background:linear-gradient(90deg,var(--cyan),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.reveal { opacity:0; transform:translateY(30px); transition:opacity .8s,transform .8s; }
+.reveal.visible { opacity:1; transform:translateY(0); }
+.reveal-delay-1{transition-delay:.1s} .reveal-delay-2{transition-delay:.2s} .reveal-delay-3{transition-delay:.35s}
+
+/* ===================== NAV ===================== */
+header { position:fixed; top:0; left:0; right:0; z-index:1000; padding:0 2rem; }
+nav { max-width:1200px; margin:1.2rem auto 0; background:rgba(5,5,15,.7); backdrop-filter:blur(20px); border:1px solid var(--border); border-radius:16px; padding:.9rem 2rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; transition:padding .3s,box-shadow .3s; }
+.nav-logo { display:flex; align-items:center; gap:.7rem; text-decoration:none; }
+.nav-logo img { width:36px; height:36px; object-fit:contain; filter:drop-shadow(0 0 8px var(--cyan)); }
+.nav-logo span { font-family:'Orbitron',sans-serif; font-size:1.1rem; font-weight:900; background:linear-gradient(90deg,var(--cyan),#fff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.nav-links { display:flex; align-items:center; gap:.2rem; list-style:none; }
+.nav-links a { color:var(--muted); text-decoration:none; font-size:.88rem; font-weight:500; padding:.5rem .9rem; border-radius:8px; transition:color .2s,background .2s; }
+.nav-links a:hover { color:#fff; background:rgba(255,255,255,.06); }
+.nav-cta { background:linear-gradient(135deg,var(--cyan),#0077ff) !important; color:#000 !important; font-weight:700 !important; padding:.5rem 1.2rem !important; border-radius:8px !important; display:flex !important; align-items:center !important; gap:.5rem !important; }
+.nav-lang { background:none; border:1px solid var(--border); color:var(--muted); font-family:'Outfit',sans-serif; font-size:.8rem; padding:.45rem .9rem; border-radius:8px; cursor:pointer; transition:all .2s; }
+.nav-lang:hover { color:#fff; border-color:var(--cyan); }
+.nav-menu-btn { display:none; background:none; border:none; color:#fff; font-size:1.3rem; cursor:pointer; }
+@media(max-width:768px){
+    .nav-links{display:none}
+    .nav-links.open{display:flex;flex-direction:column;position:absolute;top:calc(100% + .5rem);left:0;right:0;background:rgba(5,5,15,.95);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:12px;padding:1rem;gap:.3rem}
+    .nav-menu-btn{display:block} .nav-lang{display:none} nav{position:relative}
+}
+
+/* ===================== HERO ===================== */
+#home { min-height:100vh; display:flex; align-items:center; padding-top:120px; overflow:hidden; position:relative; }
+.hero-bg { position:absolute; inset:0; background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(0,229,255,.06) 0%,transparent 70%),radial-gradient(ellipse 40% 60% at 20% 80%,rgba(255,0,85,.05) 0%,transparent 60%); }
+.hero-grid-lines { position:absolute; inset:0; background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px); background-size:80px 80px; mask-image:radial-gradient(ellipse at 60% 50%,black 0%,transparent 70%); }
+.hero-inner { display:grid; grid-template-columns:1fr 1fr; gap:3rem; align-items:center; max-width:1200px; margin:0 auto; padding:0 2rem; position:relative; z-index:1; }
+.hero-badge { display:inline-flex; align-items:center; gap:.5rem; background:rgba(0,229,255,.08); border:1px solid rgba(0,229,255,.25); border-radius:99px; padding:.4rem 1rem; font-size:.78rem; color:var(--cyan); letter-spacing:2px; font-family:'Orbitron',sans-serif; margin-bottom:1.5rem; width:fit-content; }
+.hero-badge::before { content:''; width:6px; height:6px; background:var(--cyan); border-radius:50%; box-shadow:0 0 8px var(--cyan); animation:blink 1.5s infinite; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hero-title { font-family:'Orbitron',sans-serif; font-size:clamp(2.2rem,5vw,3.8rem); font-weight:900; line-height:1.05; margin-bottom:1.5rem; }
+.hero-subtitle { color:var(--muted); font-size:1.05rem; line-height:1.7; margin-bottom:2.5rem; max-width:480px; }
+.hero-btns { display:flex; gap:1rem; flex-wrap:wrap; }
+.btn-primary { background:linear-gradient(135deg,var(--cyan),#0077ff); color:#000; font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700; letter-spacing:1.5px; padding:1rem 2rem; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:.6rem; transition:transform .2s,box-shadow .2s; box-shadow:0 4px 20px rgba(0,229,255,.35); }
+.btn-primary:hover { transform:translateY(-3px); box-shadow:0 8px 30px rgba(0,229,255,.5); }
+.btn-outline { background:transparent; color:#fff; font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700; letter-spacing:1.5px; padding:1rem 2rem; border-radius:10px; text-decoration:none; border:1px solid var(--border); transition:border-color .2s,background .2s; display:inline-flex; align-items:center; gap:.6rem; }
+.btn-outline:hover { border-color:var(--cyan); background:rgba(0,229,255,.05); }
+.hero-visual { display:flex; align-items:center; justify-content:center; position:relative; }
+.hero-logo-ring { position:relative; width:340px; height:340px; display:flex; align-items:center; justify-content:center; }
+.hero-logo-ring::before,.hero-logo-ring::after { content:''; position:absolute; border-radius:50%; border:1px solid; animation:ringRotate 8s linear infinite; }
+.hero-logo-ring::before { inset:0; border-color:rgba(0,229,255,.2); }
+.hero-logo-ring::after { inset:20px; border-color:rgba(255,0,85,.15); animation-direction:reverse; animation-duration:12s; }
+@keyframes ringRotate{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.hero-logo-img { width:220px; height:220px; object-fit:contain; filter:drop-shadow(0 0 40px rgba(0,229,255,.4)); animation:float 4s ease-in-out infinite; position:relative; z-index:1; }
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
+.hero-ring-dot { position:absolute; width:8px; height:8px; background:var(--cyan); border-radius:50%; box-shadow:0 0 12px var(--cyan); top:0; left:50%; transform-origin:0 170px; animation:ringRotate 8s linear infinite; }
+.hero-ring-dot:nth-child(2) { background:var(--pink); box-shadow:0 0 12px var(--pink); animation-delay:-4s; transform-origin:0 150px; }
+@media(max-width:900px){.hero-inner{grid-template-columns:1fr}.hero-visual{display:none}}
+
+/* ===================== TICKER ===================== */
+.ticker-section { background:rgba(0,229,255,.05); border-top:1px solid rgba(0,229,255,.1); border-bottom:1px solid rgba(0,229,255,.1); overflow:hidden; padding:.9rem 0; position:relative; z-index:2; }
+.ticker-track { display:flex; gap:3rem; animation:ticker 20s linear infinite; width:max-content; }
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker-item { font-family:'Orbitron',sans-serif; font-size:.75rem; letter-spacing:3px; color:var(--cyan); white-space:nowrap; display:flex; align-items:center; gap:1rem; }
+.ticker-item.outline { -webkit-text-stroke:1px var(--cyan); color:transparent; }
+
+/* ===================== STATS ===================== */
+.stats-section { padding:5rem 2rem; position:relative; z-index:2; }
+.stats-grid { max-width:800px; margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:2rem; text-align:center; position:relative; overflow:hidden; transition:transform .3s,border-color .3s; }
+.stat-card:hover { transform:translateY(-4px); border-color:rgba(0,229,255,.3); }
+.stat-card::before { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:0; transition:opacity .3s; }
+.stat-card:hover::before { opacity:1; }
+.stat-icon { width:44px; height:44px; background:rgba(0,229,255,.1); border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; color:var(--cyan); font-size:1.1rem; }
+.stat-number { font-family:'Orbitron',sans-serif; font-size:2.5rem; font-weight:900; background:linear-gradient(135deg,var(--cyan),#fff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.stat-label { color:var(--muted); font-size:.85rem; margin-top:.3rem; }
+@media(max-width:600px){.stats-grid{grid-template-columns:1fr}}
+
+/* ===================== ABOUT ===================== */
+#about { padding:8rem 0; position:relative; z-index:2; }
+.about-inner { display:grid; grid-template-columns:1fr 1fr; gap:5rem; align-items:center; }
+.about-grid-mosaic { display:grid; grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(5,1fr); gap:6px; width:100%; aspect-ratio:1; max-width:380px; }
+.mosaic-block { background:rgba(0,229,255,.05); border:1px solid rgba(0,229,255,.08); border-radius:8px; transition:background .3s,border-color .3s; cursor:default; }
+.mosaic-block:hover { background:rgba(0,229,255,.12); border-color:rgba(0,229,255,.3); }
+.mosaic-center { grid-column:2/5; grid-row:2/5; background:rgba(0,0,0,.6); border:1px solid rgba(0,229,255,.3) !important; display:flex; align-items:center; justify-content:center; border-radius:12px !important; font-family:'Orbitron',sans-serif; font-size:1.8rem; font-weight:900; color:var(--cyan); text-shadow:0 0 30px var(--cyan); letter-spacing:2px; }
+.features-pills { display:flex; flex-wrap:wrap; gap:.8rem; margin-top:2rem; }
+.feature-pill { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:99px; padding:.6rem 1.2rem; font-size:.85rem; display:flex; align-items:center; gap:.5rem; transition:all .2s; }
+.feature-pill:hover { border-color:var(--cyan); color:var(--cyan); }
+.feature-pill i { color:var(--cyan); font-size:.8rem; }
+@media(max-width:900px){.about-inner{grid-template-columns:1fr}}
+
+/* ===================== GAMES ===================== */
+#games { padding:8rem 0; position:relative; z-index:2; }
+#games::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--cyan),transparent); opacity:.3; }
+#games::after { content:''; position:absolute; inset:0; background-image:linear-gradient(rgba(0,229,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.015) 1px,transparent 1px); background-size:60px 60px; pointer-events:none; z-index:0; }
+#games .container,#games .games-header { position:relative; z-index:1; }
+.games-header { text-align:center; margin-bottom:4rem; }
+.games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:2rem; }
+.game-card { background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden; transition:transform .3s,border-color .3s,box-shadow .3s; position:relative; }
+.game-card:hover { transform:translateY(-8px); border-color:rgba(0,229,255,.3); box-shadow:0 20px 60px rgba(0,229,255,.1); }
+.game-thumb-wrap { position:relative; aspect-ratio:16/9; overflow:hidden; background:#111; }
+.game-thumb-wrap img,.game-thumb-wrap video { width:100%; height:100%; object-fit:cover; transition:transform .5s; }
+.game-card:hover .game-thumb-wrap img,.game-card:hover .game-thumb-wrap video { transform:scale(1.05); }
+.game-overlay { position:absolute; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .3s; }
+.game-card:hover .game-overlay { opacity:1; }
+.game-play-btn { width:56px; height:56px; background:var(--cyan); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; font-size:1.2rem; transform:scale(.8); transition:transform .3s; }
+.game-card:hover .game-play-btn { transform:scale(1); }
+.game-badge { position:absolute; top:.8rem; left:.8rem; background:rgba(0,0,0,.7); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.1); border-radius:99px; padding:.3rem .8rem; font-size:.7rem; letter-spacing:1px; color:var(--cyan); font-family:'Orbitron',sans-serif; }
+.game-badge.partner { color:var(--yellow); border-color:rgba(255,230,0,.2); }
+.game-badge.live { color:#00ff88; border-color:rgba(0,255,136,.2); }
+.game-body { padding:1.5rem; }
+.game-title { font-family:'Orbitron',sans-serif; font-size:1rem; font-weight:700; margin-bottom:.5rem; }
+.game-desc { color:var(--muted); font-size:.88rem; line-height:1.6; margin-bottom:1.2rem; }
+.game-footer { display:flex; align-items:center; justify-content:space-between; }
+.game-actions-row { display:flex; gap:.5rem; align-items:center; }
+.btn-game-play { background:linear-gradient(135deg,var(--cyan),#0077ff); color:#000; font-family:'Orbitron',sans-serif; font-size:.7rem; font-weight:700; letter-spacing:1px; padding:.6rem 1.2rem; border-radius:8px; text-decoration:none; transition:transform .2s,box-shadow .2s; }
+.btn-game-play:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,229,255,.4); }
+.btn-discord-sm { width:36px; height:36px; background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:8px; color:var(--muted); text-decoration:none; display:flex; align-items:center; justify-content:center; font-size:.9rem; transition:all .2s; }
+.btn-discord-sm:hover { border-color:var(--cyan); color:var(--cyan); }
+@media(max-width:600px){.games-grid{grid-template-columns:1fr}}
+
+/* ===================== CAROUSEL ===================== */
+#trailers { padding:8rem 0; position:relative; z-index:2; }
+.carousel-header { text-align:center; margin-bottom:3rem; }
+.carousel-wrapper { position:relative; max-width:900px; margin:0 auto; padding:0 4rem; }
+.carousel-track { overflow:hidden; border-radius:20px; background:rgba(0,0,0,.4); border:1px solid var(--border); aspect-ratio:16/9; position:relative; }
+.carousel-slide { position:absolute; inset:0; opacity:0; transition:opacity .5s ease; }
+.carousel-slide.active { opacity:1; z-index:1; }
+.carousel-slide img,.carousel-slide video { width:100%; height:100%; object-fit:cover; }
+.slide-caption { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,rgba(0,0,0,.8)); padding:2rem 1.5rem 1.2rem; z-index:2; }
+.slide-caption h3 { font-family:'Orbitron',sans-serif; font-size:1rem; font-weight:700; }
+.slide-caption p { color:var(--muted); font-size:.85rem; margin-top:.2rem; }
+.carousel-btn { position:absolute; top:50%; transform:translateY(-50%); width:44px; height:44px; background:rgba(5,5,15,.8); border:1px solid var(--border); border-radius:50%; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; transition:all .2s; z-index:5; }
+.carousel-btn:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 20px rgba(0,229,255,.3); }
+.carousel-btn.prev { left:0; }
+.carousel-btn.next { right:0; }
+.carousel-dots { display:flex; justify-content:center; gap:.6rem; margin-top:1.5rem; }
+.carousel-dot { width:6px; height:6px; background:var(--border); border-radius:99px; cursor:pointer; transition:all .2s; border:none; }
+.carousel-dot.active { background:var(--cyan); width:20px; box-shadow:0 0 8px var(--cyan); }
+
+/* ===================== TEAM ===================== */
+#team { padding:8rem 0; position:relative; z-index:2; }
+#team::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--pink),transparent); opacity:.3; }
+.team-header { text-align:center; margin-bottom:4rem; }
+.team-scroll-wrap { overflow:hidden; position:relative; }
+.team-scroll-wrap::before,.team-scroll-wrap::after { content:''; position:absolute; top:0; bottom:0; width:100px; z-index:3; pointer-events:none; }
+.team-scroll-wrap::before { left:0; background:linear-gradient(to right,var(--dark),transparent); }
+.team-scroll-wrap::after { right:0; background:linear-gradient(to left,var(--dark),transparent); }
+.team-track { display:flex; gap:1.5rem; padding:1rem 2rem; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; cursor:grab; }
+.team-track::-webkit-scrollbar { display:none; }
+.team-track.dragging { cursor:grabbing; }
+.team-card { flex-shrink:0; width:180px; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:1.5rem 1rem; text-align:center; scroll-snap-align:start; transition:transform .3s,border-color .3s; }
+.team-card:hover { transform:translateY(-6px); border-color:rgba(0,229,255,.3); }
+.team-avatar { width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid rgba(0,229,255,.3); margin:0 auto 1rem; display:block; transition:border-color .3s,box-shadow .3s; background:#111; }
+.team-card:hover .team-avatar { border-color:var(--cyan); box-shadow:0 0 20px rgba(0,229,255,.3); }
+.team-name { font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700; margin-bottom:.3rem; }
+.team-role { color:var(--cyan); font-size:.75rem; margin-bottom:1rem; }
+.team-link { font-size:.72rem; color:var(--muted); text-decoration:none; display:flex; align-items:center; justify-content:center; gap:.4rem; transition:color .2s; border:1px solid var(--border); border-radius:6px; padding:.4rem .8rem; }
+.team-link:hover { color:var(--cyan); border-color:var(--cyan); }
+.team-arrows { display:flex; justify-content:center; gap:.8rem; margin-top:2rem; }
+.team-arrow-btn { width:44px; height:44px; background:var(--card); border:1px solid var(--border); border-radius:50%; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; transition:all .2s; }
+.team-arrow-btn:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 20px rgba(0,229,255,.2); }
+
+/* ===================== CONTACT ===================== */
+#contact { padding:8rem 0; position:relative; z-index:2; }
+.contact-inner { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:4rem; display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:start; position:relative; overflow:hidden; }
+.contact-inner::before { content:''; position:absolute; top:-50%; right:-10%; width:400px; height:400px; background:radial-gradient(circle,rgba(0,229,255,.06),transparent 70%); pointer-events:none; }
+.contact-socials { display:flex; gap:.8rem; margin-top:2rem; }
+.social-btn { width:44px; height:44px; background:var(--card); border:1px solid var(--border); border-radius:10px; color:var(--muted); text-decoration:none; display:flex; align-items:center; justify-content:center; font-size:1rem; transition:all .2s; }
+.social-btn:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 16px rgba(0,229,255,.2); }
+.contact-form { display:flex; flex-direction:column; gap:1rem; }
+.form-group { position:relative; }
+.form-group input,.form-group textarea { width:100%; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:10px; padding:.9rem 1rem; color:#fff; font-family:'Outfit',sans-serif; font-size:.9rem; transition:border-color .3s,box-shadow .3s; }
+.form-group input:focus,.form-group textarea:focus { outline:none; border-color:var(--cyan); box-shadow:0 0 15px rgba(0,229,255,.15); }
+.form-group textarea { resize:vertical; min-height:120px; }
+.form-group label { position:absolute; top:.9rem; left:1rem; color:var(--muted); font-size:.88rem; pointer-events:none; transition:all .2s; }
+.form-group input:focus~label,.form-group input:not(:placeholder-shown)~label,.form-group textarea:focus~label,.form-group textarea:not(:placeholder-shown)~label { top:-.6rem; font-size:.72rem; background:var(--dark2); padding:0 .4rem; color:var(--cyan); border-radius:4px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.btn-submit { background:linear-gradient(135deg,var(--cyan),#0077ff); color:#000; font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700; letter-spacing:1px; padding:1rem 2rem; border-radius:10px; border:none; cursor:pointer; transition:transform .2s,box-shadow .2s; display:flex; align-items:center; gap:.5rem; width:fit-content; }
+.btn-submit:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(0,229,255,.4); }
+.form-msg { font-size:.85rem; margin-top:.5rem; }
+.form-msg.ok { color:#00ff88; }
+.form-msg.err { color:var(--pink); }
+@media(max-width:900px){.contact-inner{grid-template-columns:1fr;padding:2rem;gap:2rem}.form-row{grid-template-columns:1fr}}
+
+/* ===================== FOOTER ===================== */
+footer { position:relative; z-index:2; border-top:1px solid var(--border); padding:3rem 2rem; }
+.footer-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+.footer-brand { font-family:'Orbitron',sans-serif; font-size:1.3rem; font-weight:900; background:linear-gradient(90deg,var(--cyan),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+footer p { color:var(--muted); font-size:.85rem; }
+.scroll-top { width:40px; height:40px; background:var(--card); border:1px solid var(--border); border-radius:10px; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.scroll-top:hover { border-color:var(--cyan); color:var(--cyan); }
+
+/* ===================== PARTICLE ===================== */
+.particle-burst { position:fixed; width:6px; height:6px; border-radius:50%; pointer-events:none; z-index:99998; animation:particleBurst .6s ease-out forwards; }
+@keyframes particleBurst{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:var(--tx,translate(30px,-40px)) scale(0);opacity:0}}
+
+/* ==========================================
+   ADMIN PANEL
+   ========================================== */
+#admin-fab { position:fixed; bottom:2rem; right:2rem; width:52px; height:52px; background:linear-gradient(135deg,var(--cyan),var(--pink)); border:none; border-radius:50%; cursor:pointer; z-index:9998; display:flex; align-items:center; justify-content:center; font-size:1.2rem; color:#000; box-shadow:0 0 20px rgba(0,229,255,.4); transition:transform .3s,box-shadow .3s; }
+#admin-fab:hover { transform:scale(1.1) rotate(15deg); box-shadow:0 0 35px rgba(0,229,255,.7); }
+#admin-fab .fa-spinner { animation:spin .8s linear infinite; }
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Modals */
+.a-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); backdrop-filter:blur(12px); z-index:9999; align-items:center; justify-content:center; }
+.a-modal.open { display:flex; }
+.a-box { background:#0a0a12; border:1px solid rgba(0,229,255,.3); border-radius:16px; padding:2.5rem; width:90%; max-width:420px; box-shadow:0 0 60px rgba(0,229,255,.15); position:relative; animation:slideIn .35s cubic-bezier(.34,1.56,.64,1); }
+@keyframes slideIn{from{opacity:0;transform:translateY(40px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.a-box h2 { font-family:'Orbitron',sans-serif; font-size:1.2rem; color:var(--cyan); margin-bottom:1.8rem; letter-spacing:2px; display:flex; align-items:center; gap:.7rem; }
+.a-close { position:absolute; top:1rem; right:1rem; background:none; border:none; color:rgba(255,255,255,.4); font-size:1.2rem; cursor:pointer; transition:color .2s; }
+.a-close:hover { color:var(--pink); }
+.a-input { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(0,229,255,.2); border-radius:8px; padding:.85rem 1rem; color:#fff; font-family:'Outfit',sans-serif; font-size:.95rem; margin-bottom:1rem; transition:border-color .3s,box-shadow .3s; box-sizing:border-box; }
+.a-input:focus { outline:none; border-color:var(--cyan); box-shadow:0 0 15px rgba(0,229,255,.2); }
+.a-input select,.a-select { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(0,229,255,.2); border-radius:8px; padding:.85rem 1rem; color:#fff; font-family:'Outfit',sans-serif; font-size:.9rem; margin-bottom:1rem; cursor:pointer; }
+.a-btn { width:100%; background:linear-gradient(135deg,var(--cyan),#0077ff); border:none; border-radius:8px; padding:.9rem; color:#000; font-family:'Orbitron',sans-serif; font-size:.85rem; font-weight:700; letter-spacing:1px; cursor:pointer; transition:opacity .2s,transform .2s; }
+.a-btn:hover { opacity:.9; transform:translateY(-1px); }
+.a-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+.a-err { color:#ff4466; font-size:.85rem; margin-top:-.5rem; margin-bottom:.8rem; }
+
+/* Panel */
+.a-panel { background:#080810; border:1px solid rgba(0,229,255,.2); border-radius:20px; width:95vw; max-width:1000px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; animation:slideIn .35s cubic-bezier(.34,1.56,.64,1); }
+.a-panel-hdr { padding:1.5rem 2rem; border-bottom:1px solid rgba(0,229,255,.15); display:flex; align-items:center; justify-content:space-between; background:rgba(0,229,255,.03); }
+.a-panel-hdr h2 { font-family:'Orbitron',sans-serif; color:var(--cyan); font-size:1rem; letter-spacing:2px; }
+.a-panel-body { display:flex; flex:1; overflow:hidden; }
+.a-tabs { width:190px; border-right:1px solid rgba(0,229,255,.1); padding:1.5rem 0; display:flex; flex-direction:column; gap:.2rem; flex-shrink:0; }
+.a-tab-btn { background:none; border:none; color:rgba(255,255,255,.5); font-family:'Outfit',sans-serif; font-size:.88rem; padding:.8rem 1.5rem; text-align:left; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:.6rem; border-left:3px solid transparent; }
+.a-tab-btn:hover { color:#fff; background:rgba(255,255,255,.04); }
+.a-tab-btn.active { color:var(--cyan); border-left-color:var(--cyan); background:rgba(0,229,255,.06); }
+.a-tab-btn i { width:16px; text-align:center; }
+.a-logout { margin-top:auto; border-top:1px solid rgba(255,255,255,.06); padding-top:.5rem; color:rgba(255,0,85,.6) !important; }
+.a-logout:hover { color:var(--pink) !important; background:rgba(255,0,85,.06) !important; }
+.a-content { flex:1; overflow-y:auto; padding:1.5rem 2rem; }
+.a-content::-webkit-scrollbar { width:4px; }
+.a-content::-webkit-scrollbar-thumb { background:rgba(0,229,255,.3); border-radius:4px; }
+.a-tab-content { display:none; }
+.a-tab-content.active { display:block; }
+.a-sec-title { font-family:'Orbitron',sans-serif; color:#fff; font-size:.8rem; letter-spacing:2px; margin-bottom:1.5rem; padding-bottom:.8rem; border-bottom:1px solid rgba(255,255,255,.08); }
+.a-label { color:rgba(255,255,255,.4); font-size:.75rem; margin-bottom:.3rem; display:block; }
+
+/* List items */
+.a-list { display:flex; flex-direction:column; gap:.8rem; margin-bottom:1.5rem; }
+.a-item { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:.9rem 1rem; display:flex; align-items:center; gap:1rem; }
+.a-item-thumb { width:80px; height:50px; object-fit:cover; border-radius:6px; background:#111; flex-shrink:0; }
+.a-item-thumb-sm { width:46px; height:46px; border-radius:50%; object-fit:cover; background:#111; border:2px solid rgba(0,229,255,.2); flex-shrink:0; }
+.a-item-info { flex:1; min-width:0; }
+.a-item-info strong { color:#fff; font-size:.88rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.a-item-info span { color:var(--muted); font-size:.75rem; }
+.a-item-actions { display:flex; gap:.4rem; flex-shrink:0; }
+.a-icon-btn { width:32px; height:32px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); border-radius:6px; color:rgba(255,255,255,.5); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.8rem; transition:all .2s; }
+.a-icon-btn.del:hover { background:rgba(255,0,85,.15); border-color:var(--pink); color:var(--pink); }
+
+/* Add form */
+.a-add-form { background:rgba(0,229,255,.03); border:1px dashed rgba(0,229,255,.25); border-radius:12px; padding:1.5rem; }
+.a-add-form h4 { color:var(--cyan); font-family:'Orbitron',sans-serif; font-size:.72rem; letter-spacing:1px; margin-bottom:1.2rem; }
+.a-form-row { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:.8rem; }
+.a-form-group { flex:1; min-width:140px; }
+.a-save-btn { background:linear-gradient(135deg,var(--cyan),#0077ff); border:none; border-radius:8px; padding:.7rem 1.5rem; color:#000; font-family:'Orbitron',sans-serif; font-size:.72rem; font-weight:700; letter-spacing:1px; cursor:pointer; transition:opacity .2s,transform .2s; margin-top:.8rem; }
+.a-save-btn:hover { opacity:.85; transform:translateY(-1px); }
+.a-save-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+/* Upload area */
+.a-upload-area { border:2px dashed rgba(0,229,255,.25); border-radius:10px; padding:1.2rem; text-align:center; cursor:pointer; transition:all .3s; color:rgba(255,255,255,.4); font-size:.82rem; margin-bottom:.8rem; position:relative; }
+.a-upload-area:hover { border-color:var(--cyan); color:var(--cyan); background:rgba(0,229,255,.03); }
+.a-upload-area i { font-size:1.4rem; display:block; margin-bottom:.4rem; }
+.a-upload-area input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.a-upload-preview { width:100%; max-height:120px; object-fit:cover; border-radius:8px; margin-bottom:.8rem; display:none; }
+.a-upload-preview.show { display:block; }
+.a-progress { height:4px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; margin-bottom:.8rem; display:none; }
+.a-progress.show { display:block; }
+.a-progress-bar { height:100%; background:linear-gradient(90deg,var(--cyan),var(--pink)); border-radius:99px; width:0%; transition:width .3s; }
+.a-success { color:#00ff88; font-size:.82rem; margin-top:.5rem; }
+.a-error-msg { color:var(--pink); font-size:.82rem; margin-top:.5rem; }
+
+/* or divider */
+.a-or { display:flex; align-items:center; gap:.8rem; color:var(--muted); font-size:.78rem; margin:.8rem 0; }
+.a-or::before,.a-or::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.08); }
+
+/* loading spinner overlay inside panel */
+.a-loading { display:flex; align-items:center; justify-content:center; padding:3rem; color:var(--muted); gap:.8rem; }
+.a-loading i { color:var(--cyan); }
+
+/* empty state */
+.a-empty { text-align:center; padding:2rem; color:var(--muted); font-size:.88rem; }
+.a-empty i { font-size:2rem; color:rgba(0,229,255,.2); display:block; margin-bottom:.8rem; }
+    </style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- Preloader -->
+<div id="preloader">
+    <div class="preloader-logo">NeoX</div>
+    <div class="preloader-bar"><div class="preloader-progress" id="prog-bar"></div></div>
+    <div class="preloader-pct"><span id="prog-num">0</span>%</div>
+</div>
+
+<!-- Admin FAB -->
+<button id="admin-fab" title="Admin"><i class="fas fa-cog" id="fab-icon"></i></button>
+
+<!-- Admin Login Modal -->
+<div class="a-modal" id="modal-login">
+    <div class="a-box">
+        <button class="a-close" onclick="closeModal('modal-login')"><i class="fas fa-times"></i></button>
+        <h2><i class="fas fa-lock"></i> ACESSO ADMIN</h2>
+        <input type="email" class="a-input" id="adm-email" placeholder="E-mail do admin">
+        <input type="password" class="a-input" id="adm-pass" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="a-err" id="login-err" style="display:none"></div>
+        <button class="a-btn" id="login-btn" onclick="doLogin()">ENTRAR</button>
+    </div>
+</div>
+
+<!-- Admin Panel Modal -->
+<div class="a-modal" id="modal-panel">
+    <div class="a-panel">
+        <div class="a-panel-hdr">
+            <h2><i class="fas fa-shield-alt" style="margin-right:.6rem"></i> PAINEL ADMIN — NEOX STUDIO</h2>
+            <button style="background:none;border:none;color:rgba(255,255,255,.4);font-size:1.1rem;cursor:pointer;" onclick="closeModal('modal-panel')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="a-panel-body">
+            <div class="a-tabs">
+                <button class="a-tab-btn active" onclick="switchTab('carousel',this)"><i class="fas fa-images"></i> Carrossel</button>
+                <button class="a-tab-btn" onclick="switchTab('games',this)"><i class="fas fa-gamepad"></i> Jogos</button>
+                <button class="a-tab-btn" onclick="switchTab('team',this)"><i class="fas fa-users"></i> Equipe</button>
+                <button class="a-tab-btn a-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            </div>
+            <div class="a-content">
+                <!-- CAROUSEL -->
+                <div class="a-tab-content active" id="tab-carousel">
+                    <div class="a-sec-title">GERENCIAR CARROSSEL</div>
+                    <div class="a-list" id="admin-slides-list">
+                        <div class="a-loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+                    </div>
+                    <div class="a-add-form">
+                        <h4>+ ADICIONAR SLIDE</h4>
+                        <!-- Upload -->
+                        <span class="a-label">Fazer upload de arquivo</span>
+                        <div class="a-upload-area" id="slide-upload-area">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            Clique ou arraste uma imagem / vídeo
+                            <input type="file" id="slide-file-input" accept="image/*,video/*" onchange="handleSlideFileSelect(this)">
+                        </div>
+                        <img class="a-upload-preview" id="slide-preview">
+                        <div class="a-progress" id="slide-progress"><div class="a-progress-bar" id="slide-progress-bar"></div></div>
+                        <!-- OR URL -->
+                        <div class="a-or">ou use uma URL externa</div>
+                        <div class="a-form-row">
+                            <div class="a-form-group">
+                                <span class="a-label">URL da mídia</span>
+                                <input type="text" class="a-input" id="new-slide-url" placeholder="https://... ou assets/slides/...">
+                            </div>
+                            <div class="a-form-group" style="max-width:120px">
+                                <span class="a-label">Tipo</span>
+                                <select class="a-input" id="new-slide-type"><option value="image">Imagem</option><option value="video">Vídeo</option></select>
+                            </div>
+                        </div>
+                        <div class="a-form-row">
+                            <div class="a-form-group">
+                                <span class="a-label">Título</span>
+                                <input type="text" class="a-input" id="new-slide-title" placeholder="Anime Crash">
+                            </div>
+                            <div class="a-form-group">
+                                <span class="a-label">Subtítulo</span>
+                                <input type="text" class="a-input" id="new-slide-sub" placeholder="Gameplay Oficial">
+                            </div>
+                        </div>
+                        <button class="a-save-btn" id="btn-add-slide" onclick="addSlide()">ADICIONAR SLIDE</button>
+                        <div id="slide-msg"></div>
+                    </div>
+                </div>
+                <!-- GAMES -->
+                <div class="a-tab-content" id="tab-games">
+                    <div class="a-sec-title">GERENCIAR JOGOS</div>
+                    <div class="a-list" id="admin-games-list">
+                        <div class="a-loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+                    </div>
+                    <div class="a-add-form">
+                        <h4>+ ADICIONAR JOGO</h4>
+                        <span class="a-label">Thumbnail (upload)</span>
+                        <div class="a-upload-area">
+                            <i class="fas fa-image"></i>
+                            Imagem ou vídeo do jogo
+                            <input type="file" id="game-file-input" accept="image/*,video/*" onchange="handleGameFileSelect(this)">
+                        </div>
+                        <img class="a-upload-preview" id="game-preview">
+                        <div class="a-progress" id="game-progress"><div class="a-progress-bar" id="game-progress-bar"></div></div>
+                        <div class="a-or">ou URL externa</div>
+                        <div class="a-form-row">
+                            <div class="a-form-group">
+                                <span class="a-label">URL da imagem/vídeo</span>
+                                <input type="text" class="a-input" id="new-game-img" placeholder="https://... ou assets/...">
+                            </div>
+                            <div class="a-form-group" style="max-width:120px">
+                                <span class="a-label">Tipo</span>
+                                <select class="a-input" id="new-game-media-type"><option value="image">Imagem</option><option value="video">Vídeo</option></select>
+                            </div>
+                        </div>
+                        <div class="a-form-row">
+                            <div class="a-form-group">
+                                <span class="a-label">Nome do Jogo</span>
+                                <input type="text" class="a-input" id="new-game-name" placeholder="Anime Crash">
+                            </div>
+                            <div class="a-form-group" style="max-width:130px">
+                                <span class="a-label">Status</span>
+                                <select class="a-input" id="new-game-status"><option value="DEV">DEV</option><option value="LIVE">LIVE</option><option value="PARTNER">PARTNER</option></select>
+                            </div>
+                        </div>
+                        <div class="a-form-row">
+                            <div class="a-form-group">
+                                <span class="a-label">Descrição (PT)</span>
+                                <input type="text" class="a-input" id="new-game-desc-pt" placeholder="Entre na arena...">
+                            </div>
+                            <div class="a-form-group">
+                                <span class="a-label">Descrição (EN)</span>
+                                <input type="text" class="a-input" id="new-game-desc-en" placeholder="Enter the arena...">
+                            </div>
+                        </div>
+                        <div class="a-form-row">
+                            <div class="a-form-group">
+                                <span class="a-label">Link Roblox</span>
+                                <input type="text" class="a-input" id="new-game-link" placeholder="https://roblox.com/games/...">
+                            </div>
+                            <div class="a-form-group">
+                                <span class="a-label">Discord</span>
+                                <input type="text" class="a-input" id="new-game-discord" placeholder="https://discord.gg/...">
+                            </div>
+                        </div>
+                        <button class="a-save-btn" id="btn-add-game" onclick="addGame()">ADICIONAR JOGO</button>
+                        <div id="game-msg"></div>
+                    </div>
+                </div>
+                <!-- TEAM -->
+                <div class="a-tab-content" id="tab-team">
+                    <div class="a-sec-title">GERENCIAR EQUIPE</div>
+                    <div class="a-list" id="admin-team-list">
+                        <div class="a-loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+                    </div>
+                    <div class="a-add-form">
+                        <h4>+ ADICIONAR MEMBRO</h4>
+                        <span class="a-label">Foto do membro (upload)</span>
+                        <div class="a-upload-area">
+                            <i class="fas fa-user-circle"></i>
+                            Foto do membro
+                            <input type="file" id="member-file-input" accept="image/*" onchange="handleMemberFileSelect(this)">
+                        </div>
+                        <img class="a-upload-preview" id="member-preview" style="border-radius:50%;width:80px;height:80px;object-fit:cover">
+                        <div class="a-progress" id="member-progress"><div class="a-progress-bar" id="member-progress-bar"></div></div>
+                        <div class="a-or">ou URL externa</div>
+                        <div class="a-form-group" style="margin-bottom:.8rem">
+                            <span class="a-label">URL da foto</span>
+                            <input type="text" class="a-input" id="new-member-img" placeholder="https://... ou assets/team/...">
+                        </div>
+                        <div class="a-form-row">
+                            <div class="a-form-group">
+                                <span class="a-label">Nome</span>
+                                <input type="text" class="a-input" id="new-member-name" placeholder="SasaDev">
+                            </div>
+                            <div class="a-form-group">
+                                <span class="a-label">Cargo (PT)</span>
+                                <input type="text" class="a-input" id="new-member-role-pt" placeholder="Dono">
+                            </div>
+                            <div class="a-form-group">
+                                <span class="a-label">Cargo (EN)</span>
+                                <input type="text" class="a-input" id="new-member-role-en" placeholder="Owner">
+                            </div>
+                        </div>
+                        <div class="a-form-group" style="margin-bottom:.8rem">
+                            <span class="a-label">Perfil Roblox</span>
+                            <input type="text" class="a-input" id="new-member-roblox" placeholder="https://www.roblox.com/users/.../profile">
+                        </div>
+                        <button class="a-save-btn" id="btn-add-member" onclick="addMember()">ADICIONAR MEMBRO</button>
+                        <div id="member-msg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ SITE ============ -->
+<header>
+    <nav id="main-nav">
+        <a href="#home" class="nav-logo">
+            <img src="assets/NeoX.png" alt="NeoX" onerror="this.style.display='none'">
+            <span id="logo-text">NeoX</span>
+        </a>
+        <ul class="nav-links" id="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#about" data-pt="Sobre" data-en="About">Sobre</a></li>
+            <li><a href="#games" data-pt="Jogos" data-en="Games">Jogos</a></li>
+            <li><a href="#trailers" data-pt="Trailers" data-en="Trailers">Trailers</a></li>
+            <li><a href="#team" data-pt="Equipe" data-en="Team">Equipe</a></li>
+            <li><a href="#contact" data-pt="Contato" data-en="Contact">Contato</a></li>
+            <li><a href="https://discord.gg/nNhGsEwanr" class="nav-cta" target="_blank"><i class="fab fa-discord"></i> Discord</a></li>
+        </ul>
+        <div style="display:flex;align-items:center;gap:.8rem">
+            <button class="nav-lang" id="lang-btn">PT/EN</button>
+            <button class="nav-menu-btn" id="mob-btn"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+</header>
+
+<main>
+<section id="home">
+    <div class="hero-bg"></div>
+    <div class="hero-grid-lines"></div>
+    <div class="hero-inner">
+        <div>
+            <div class="hero-badge" data-pt="BEM-VINDO AO NOVO" data-en="WELCOME TO THE NEW">BEM-VINDO AO NOVO</div>
+            <h1 class="hero-title reveal">Criando <span class="grad">Universos</span><br>Inesquecíveis</h1>
+            <p class="hero-subtitle reveal reveal-delay-1" data-pt="Jogos com energia, cores e diversão. A NeoX é onde a comunidade ganha vida." data-en="Games with energy, colors, and fun. NeoX is where the community comes alive.">Jogos com energia, cores e diversão. A NeoX é onde a comunidade ganha vida.</p>
+            <div class="hero-btns reveal reveal-delay-2">
+                <a href="#games" class="btn-primary"><i class="fas fa-rocket"></i> <span data-pt="NOSSOS JOGOS" data-en="OUR GAMES">NOSSOS JOGOS</span></a>
+                <a href="#about" class="btn-outline"><span data-pt="CONHEÇA A NEOX" data-en="MEET NEOX">CONHEÇA A NEOX</span></a>
+            </div>
+        </div>
+        <div class="hero-visual reveal reveal-delay-3">
+            <div class="hero-logo-ring">
+                <div class="hero-ring-dot"></div>
+                <div class="hero-ring-dot"></div>
+                <img src="assets/NeoX.png" alt="NeoX" class="hero-logo-img" onerror="this.style.display='none'">
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="ticker-section">
+    <div class="ticker-track">
+        <span class="ticker-item">PLAY THE FUTURE ★</span>
+        <span class="ticker-item outline">NEOX STUDIO ★</span>
+        <span class="ticker-item">ROBLOX GAMES ★</span>
+        <span class="ticker-item outline">ANIME CRASH ★</span>
+        <span class="ticker-item">PLAY THE FUTURE ★</span>
+        <span class="ticker-item outline">NEOX STUDIO ★</span>
+        <span class="ticker-item">ROBLOX GAMES ★</span>
+        <span class="ticker-item outline">ANIME CRASH ★</span>
+    </div>
+</div>
+
+<div class="stats-section">
+    <div class="stats-grid container">
+        <div class="stat-card reveal"><div class="stat-icon"><i class="fas fa-gamepad"></i></div><div class="stat-number"><span class="counter" data-target="0">0</span>M+</div><div class="stat-label" data-pt="Jogadores Ativos" data-en="Active Players">Jogadores Ativos</div></div>
+        <div class="stat-card reveal reveal-delay-1"><div class="stat-icon"><i class="fab fa-discord"></i></div><div class="stat-number"><span class="counter" data-target="10">0</span>k+</div><div class="stat-label" data-pt="Membros Discord" data-en="Discord Members">Membros Discord</div></div>
+        <div class="stat-card reveal reveal-delay-2"><div class="stat-icon"><i class="fas fa-rocket"></i></div><div class="stat-number"><span class="counter" data-target="2">0</span>+</div><div class="stat-label" data-pt="Mega Projetos" data-en="Mega Projects">Mega Projetos</div></div>
+    </div>
+</div>
+
+<section id="about">
+    <div class="container">
+        <div class="about-inner">
+            <div class="reveal"><div class="about-grid-mosaic" id="mosaic-grid"></div></div>
+            <div>
+                <div class="section-eyebrow" data-pt="A NOSSA ESSÊNCIA" data-en="OUR ESSENCE">A NOSSA ESSÊNCIA</div>
+                <h2 class="section-title reveal" data-pt="Diversão levada<br>a sério." data-en="Fun taken<br>seriously.">Diversão levada<br>a sério.</h2>
+                <p class="section-subtitle reveal reveal-delay-1" data-pt="A NeoX nasceu para quebrar a monotonia. Nós não fazemos apenas jogos, criamos parques de diversão digitais onde cada pixel é pensado para fazer você sorrir." data-en="NeoX was born to break the monotony. We don't just make games, we create digital amusement parks where every pixel is designed to make you smile.">A NeoX nasceu para quebrar a monotonia. Nós não fazemos apenas jogos, criamos parques de diversão digitais onde cada pixel é pensado para fazer você sorrir.</p>
+                <div class="features-pills reveal reveal-delay-2">
+                    <div class="feature-pill"><i class="fas fa-gamepad"></i> <span data-pt="Gameplay Vibrante" data-en="Vibrant Gameplay">Gameplay Vibrante</span></div>
+                    <div class="feature-pill"><i class="fas fa-users"></i> <span data-pt="Comunidade" data-en="Community">Comunidade</span></div>
+                    <div class="feature-pill"><i class="fas fa-rocket"></i> <span data-pt="Evolução Constante" data-en="Constant Evolution">Evolução Constante</span></div>
+                    <div class="feature-pill"><i class="fas fa-palette"></i> <span data-pt="Arte Original" data-en="Original Art">Arte Original</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="games">
+    <div class="games-header container">
+        <div class="section-eyebrow" data-pt="O QUE JOGAR AGORA" data-en="WHAT TO PLAY NOW">O QUE JOGAR AGORA</div>
+        <h2 class="section-title reveal" data-pt="Nossos Universos" data-en="Our Universes">Nossos Universos</h2>
+        <p class="section-subtitle reveal reveal-delay-1" data-pt="Explore os mundos imersivos que construímos com paixão e adrenalina para nossa comunidade." data-en="Explore the immersive worlds we built with passion and adrenaline for our community.">Explore os mundos imersivos que construímos com paixão e adrenalina para nossa comunidade.</p>
+    </div>
+    <div class="games-grid container" id="games-grid"></div>
+</section>
+
+<section id="trailers">
+    <div class="carousel-header container">
+        <div class="section-eyebrow" data-pt="CINEMÁTICAS" data-en="CINEMATICS">CINEMÁTICAS</div>
+        <h2 class="section-title reveal" data-pt="Mídia Oficial" data-en="Official Media">Mídia Oficial</h2>
+    </div>
+    <div class="carousel-wrapper container">
+        <button class="carousel-btn prev" id="car-prev"><i class="fas fa-chevron-left"></i></button>
+        <div class="carousel-track" id="carousel-track"></div>
+        <button class="carousel-btn next" id="car-next"><i class="fas fa-chevron-right"></i></button>
+        <div class="carousel-dots" id="carousel-dots"></div>
+    </div>
+</section>
+
+<section id="team">
+    <div class="team-header container">
+        <div class="section-eyebrow" data-pt="OS CRIADORES" data-en="THE CREATORS">OS CRIADORES</div>
+        <h2 class="section-title reveal" data-pt="A Equipe NeoX" data-en="The NeoX Team">A Equipe NeoX</h2>
+    </div>
+    <div class="team-scroll-wrap">
+        <div class="team-track" id="team-track"></div>
+    </div>
+    <div class="team-arrows">
+        <button class="team-arrow-btn" id="team-prev"><i class="fas fa-chevron-left"></i></button>
+        <button class="team-arrow-btn" id="team-next"><i class="fas fa-chevron-right"></i></button>
+    </div>
+</section>
+
+<section id="contact">
+    <div class="container">
+        <div class="contact-inner reveal">
+            <div>
+                <div class="section-eyebrow" data-pt="FALE CONOSCO" data-en="TALK TO US">FALE CONOSCO</div>
+                <h2 class="section-title" data-pt="Pronto para<br>a diversão?" data-en="Ready for<br>the fun?">Pronto para<br>a diversão?</h2>
+                <p class="section-subtitle" style="margin-top:1rem" data-pt="Mande uma mensagem, entre no nosso Discord e faça parte da família NeoX!" data-en="Send a message, join our Discord and become part of the NeoX family!">Mande uma mensagem, entre no nosso Discord e faça parte da família NeoX!</p>
+                <div class="contact-socials">
+                    <a href="https://x.com/NeoX351459" class="social-btn" target="_blank"><i class="fab fa-twitter"></i></a>
+                    <a href="https://discord.gg/nNhGsEwanr" class="social-btn" target="_blank"><i class="fab fa-discord"></i></a>
+                </div>
+            </div>
+            <form class="contact-form" id="neox-form">
+                <div class="form-row">
+                    <div class="form-group"><input type="text" id="f-name" placeholder=" " required><label for="f-name" data-pt="Seu Nome" data-en="Your Name">Seu Nome</label></div>
+                    <div class="form-group"><input type="email" id="f-email" placeholder=" " required><label for="f-email" data-pt="Seu E-mail" data-en="Your E-mail">Seu E-mail</label></div>
+                </div>
+                <div class="form-group"><input type="text" id="f-roblox" placeholder=" "><label for="f-roblox" data-pt="Nick Roblox (Opcional)" data-en="Roblox Nick (Optional)">Nick Roblox (Opcional)</label></div>
+                <div class="form-group"><textarea id="f-msg" placeholder=" " required minlength="16"></textarea><label for="f-msg" data-pt="Mensagem (mín. 16 chars)" data-en="Message (min. 16 chars)">Mensagem (mín. 16 chars)</label></div>
+                <button type="submit" class="btn-submit"><span data-pt="Enviar Mensagem" data-en="Send Message">Enviar Mensagem</span> <i class="fas fa-paper-plane"></i></button>
+                <div id="form-msg" class="form-msg"></div>
+            </form>
+        </div>
+    </div>
+</section>
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <span class="footer-brand">NeoX</span>
+        <p>&copy; 2026 NeoX Studio. <span data-pt="Todos os direitos reservados." data-en="All rights reserved.">Todos os direitos reservados.</span></p>
+        <a href="#home" class="scroll-top"><i class="fas fa-arrow-up"></i></a>
+    </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  ⚙️  CONFIG — SUBSTITUA COM SUAS CREDENCIAIS DO SUPABASE
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://yajrjspyrbkhiijttixn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhanJqc3B5cmJraGlpanR0aXhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODIyNDYsImV4cCI6MjA5NjM1ODI0Nn0.Y7bmB6suwojGyzgs4hc4xoxAwOSMK24G2eG_U1RkqoQ';
+// ═══════════════════════════════════════════════════════════
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── State ────────────────────────────────────────────────
+let currentLang = 'pt';
+let carIdx = 0;
+let carTimer = null;
+let slidesData = [];
+let pendingSlideUrl = '';
+let pendingGameUrl = '';
+let pendingMemberUrl = '';
+
+// ── Helpers ───────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function avatar(name) {
+    return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect fill="%23111" width="80" height="80" rx="40"/><text x="40" y="50" text-anchor="middle" fill="%2300e5ff" font-size="28" font-family="sans-serif">${encodeURIComponent(name.charAt(0).toUpperCase())}</text></svg>`;
+}
+function showMsg(id, txt, isErr) {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = txt;
+    el.className = isErr ? 'a-error-msg' : 'a-success';
+    setTimeout(() => { el.textContent = ''; }, 4000);
+}
+function setBtn(id, disabled, txt) {
+    const el = $(id);
+    if (!el) return;
+    el.disabled = disabled;
+    if (txt) el.textContent = txt;
+}
+
+// ── Preloader ─────────────────────────────────────────────
+(function() {
+    let pct = 0;
+    const bar = $('prog-bar'), num = $('prog-num');
+    const t = setInterval(() => {
+        pct += Math.floor(Math.random() * 18) + 4;
+        if (pct >= 100) { pct = 100; clearInterval(t); setTimeout(() => document.body.classList.add('loaded'), 500); }
+        bar.style.width = pct + '%';
+        num.textContent = pct;
+    }, 70);
+})();
+
+// ── Cursor ────────────────────────────────────────────────
+(function() {
+    const dot = $('cursor-dot'), ring = $('cursor-ring');
+    if (!dot) return;
+    let mx=0, my=0, rx=0, ry=0;
+    document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; dot.style.transform=`translate(${mx}px,${my}px)`; });
+    (function loop(){ rx+=(mx-rx)*.12; ry+=(my-ry)*.12; ring.style.transform=`translate(${rx}px,${ry}px)`; requestAnimationFrame(loop); })();
+})();
+
+// ── Particle burst ────────────────────────────────────────
+document.addEventListener('click', e => {
+    const colors=['#00e5ff','#ff0055','#ffe600','#fff'];
+    for(let i=0;i<8;i++){
+        const p=document.createElement('div'); p.className='particle-burst';
+        const a=(Math.PI*2/8)*i, d=30+Math.random()*30;
+        p.style.setProperty('--tx',`translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px)`);
+        p.style.left=e.clientX+'px'; p.style.top=e.clientY+'px';
+        p.style.background=colors[i%4]; p.style.boxShadow=`0 0 6px ${colors[i%4]}`;
+        document.body.appendChild(p); setTimeout(()=>p.remove(),700);
+    }
+});
+
+// ── Nav ───────────────────────────────────────────────────
+$('mob-btn').addEventListener('click', () => $('nav-links').classList.toggle('open'));
+document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => $('nav-links').classList.remove('open')));
+window.addEventListener('scroll', () => {
+    const nav = document.querySelector('nav');
+    if (window.scrollY > 60) { nav.style.padding='.6rem 2rem'; nav.style.boxShadow='0 4px 30px rgba(0,0,0,.5)'; }
+    else { nav.style.padding='.9rem 2rem'; nav.style.boxShadow='none'; }
+}, { passive: true });
+
+// ── Logo glitch ───────────────────────────────────────────
+const logoText = $('logo-text');
+if (logoText) {
+    logoText.addEventListener('mouseenter', () => {
+        let iter=0; const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#'; const orig='NeoX';
+        const iv=setInterval(()=>{ logoText.textContent=orig.split('').map((c,i)=>i<iter?c:chars[Math.floor(Math.random()*chars.length)]).join(''); if(iter>=orig.length){clearInterval(iv);logoText.textContent=orig;} iter+=.4; },40);
+    });
+}
+
+// ── Lang ─────────────────────────────────────────────────
+$('lang-btn').addEventListener('click', () => {
+    currentLang = currentLang==='pt' ? 'en' : 'pt';
+    document.querySelectorAll('[data-pt],[data-en]').forEach(el => {
+        const v = el.getAttribute('data-'+currentLang);
+        if (!v) return;
+        if (el.tagName==='INPUT'||el.tagName==='TEXTAREA') { const l=el.nextElementSibling; if(l&&l.tagName==='LABEL') l.textContent=v; }
+        else el.innerHTML=v;
+    });
+    renderGames(); renderTeam();
+});
+
+// ── Smooth scroll ─────────────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        const t = document.getElementById(a.getAttribute('href').slice(1));
+        if (t) { e.preventDefault(); t.scrollIntoView({behavior:'smooth',block:'start'}); }
+    });
+});
+
+// ── Reveal observer ───────────────────────────────────────
+function observeReveal() {
+    const obs = new IntersectionObserver(entries => entries.forEach(e => { if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);} }), {threshold:.1});
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+}
+observeReveal();
+
+// ── Counter ───────────────────────────────────────────────
+document.querySelectorAll('.counter').forEach(c => {
+    new IntersectionObserver(([e]) => {
+        if(!e.isIntersecting) return;
+        const target=+c.dataset.target; let n=0; const step=Math.ceil(target/40);
+        const t=setInterval(()=>{ n=Math.min(n+step,target); c.textContent=n; if(n>=target)clearInterval(t); },40);
+    },{threshold:.5}).observe(c);
+});
+
+// ── Mosaic ────────────────────────────────────────────────
+(function(){
+    const g=$('mosaic-grid');
+    for(let i=0;i<25;i++){
+        const d=document.createElement('div'); d.className='mosaic-block';
+        if(i===12){d.className='mosaic-block mosaic-center';d.textContent='NX';}
+        g.appendChild(d);
+    }
+    function flicker(){
+        const blocks=document.querySelectorAll('.mosaic-block:not(.mosaic-center)');
+        if(!blocks.length) return;
+        const b=blocks[Math.floor(Math.random()*blocks.length)];
+        b.style.background='rgba(0,229,255,.2)'; b.style.borderColor='rgba(0,229,255,.5)';
+        setTimeout(()=>{b.style.background='';b.style.borderColor='';},200+Math.random()*300);
+        setTimeout(flicker,300+Math.random()*700);
+    }
+    setTimeout(flicker,1500);
+})();
+
+// ── Tilt ─────────────────────────────────────────────────
+function initTilt(sel) {
+    document.querySelectorAll(sel).forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const r=card.getBoundingClientRect(), x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+            card.style.transform=`perspective(600px) rotateY(${x*10}deg) rotateX(${-y*10}deg) translateY(-6px)`;
+        });
+        card.addEventListener('mouseleave', ()=>{ card.style.transform=''; });
+    });
+}
+
+// ── Team drag ────────────────────────────────────────────
+(function(){
+    const t=$('team-track'); if(!t) return;
+    let drag=false,startX=0,scrollStart=0;
+    t.addEventListener('mousedown',e=>{drag=true;startX=e.pageX;scrollStart=t.scrollLeft;t.classList.add('dragging');});
+    document.addEventListener('mouseup',()=>{drag=false;t.classList.remove('dragging');});
+    t.addEventListener('mousemove',e=>{if(drag)t.scrollLeft=scrollStart-(e.pageX-startX);});
+    $('team-prev').onclick=()=>t.scrollBy({left:-210,behavior:'smooth'});
+    $('team-next').onclick=()=>t.scrollBy({left:210,behavior:'smooth'});
+})();
+
+// ── Contact form ─────────────────────────────────────────
+$('neox-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg=$('form-msg');
+    msg.textContent=currentLang==='pt'?'Enviando...':'Sending...';
+    try {
+        await fetch('/api/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('f-name').value,email:$('f-email').value,roblox:$('f-roblox').value,message:$('f-msg').value})});
+    } catch(err){}
+    msg.textContent=currentLang==='pt'?'✓ Mensagem enviada!':'✓ Message sent!';
+    msg.className='form-msg ok';
+    e.target.reset();
+    setTimeout(()=>{msg.textContent='';},4000);
+});
+
+// ═══════════════════════════════════════════════════════════
+//  DATA — Load from Supabase
+// ═══════════════════════════════════════════════════════════
+
+// ── CAROUSEL ─────────────────────────────────────────────
+async function loadSlides() {
+    const { data, error } = await sb.from('slides').select('*').order('sort_order');
+    slidesData = (error || !data) ? [] : data;
+    renderCarousel();
+}
+
+function renderCarousel() {
+    const track=$('carousel-track'), dots=$('carousel-dots');
+    if(!track) return;
+    if(!slidesData.length){ track.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.3);font-size:.9rem;">Sem mídia cadastrada</div>'; dots.innerHTML=''; return; }
+    track.innerHTML=''; dots.innerHTML='';
+    slidesData.forEach((s,i)=>{
+        const slide=document.createElement('div'); slide.className='carousel-slide'+(i===carIdx?' active':'');
+        slide.innerHTML=(s.type==='video'?`<video src="${s.url}" autoplay loop muted playsinline></video>`:`<img src="${s.url}" alt="${s.title}" onerror="this.style.opacity=.15">`)+`<div class="slide-caption"><h3>${s.title||''}</h3><p>${s.subtitle||''}</p></div>`;
+        track.appendChild(slide);
+        const dot=document.createElement('button'); dot.className='carousel-dot'+(i===carIdx?' active':''); dot.onclick=()=>goSlide(i); dots.appendChild(dot);
+    });
+}
+function goSlide(n){ carIdx=(n+slidesData.length)%slidesData.length; renderCarousel(); }
+$('car-prev').onclick=()=>goSlide(carIdx-1);
+$('car-next').onclick=()=>goSlide(carIdx+1);
+function startCarTimer(){ carTimer=setInterval(()=>goSlide(carIdx+1),5000); }
+document.addEventListener('keydown',e=>{ if($('modal-panel').classList.contains('open')) return; if(e.key==='ArrowLeft')goSlide(carIdx-1); if(e.key==='ArrowRight')goSlide(carIdx+1); });
+
+// ── GAMES ────────────────────────────────────────────────
+let gamesData = [];
+async function loadGames() {
+    const { data } = await sb.from('games').select('*').order('sort_order');
+    gamesData = data || [];
+    renderGames();
+}
+function renderGames() {
+    const grid=$('games-grid'); if(!grid) return;
+    if(!gamesData.length){ grid.innerHTML='<p style="color:rgba(255,255,255,.3);text-align:center;padding:2rem">Nenhum jogo cadastrado.</p>'; return; }
+    grid.innerHTML='';
+    gamesData.forEach(g=>{
+        const desc=currentLang==='en'&&g.desc_en?g.desc_en:g.desc_pt||'';
+        const statusCls=g.status==='PARTNER'?'partner':g.status==='LIVE'?'live':'';
+        const div=document.createElement('div'); div.className='game-card reveal';
+        div.innerHTML=`
+            <div class="game-thumb-wrap">
+                ${g.media_type==='video'?`<video src="${g.image_url}" autoplay loop muted playsinline></video>`:`<img src="${g.image_url||''}" alt="${g.name}" onerror="this.style.opacity=.15">`}
+                <div class="game-overlay"><div class="game-play-btn"><i class="fas fa-play"></i></div></div>
+                <span class="game-badge ${statusCls}">${g.status}</span>
+            </div>
+            <div class="game-body">
+                <h3 class="game-title">${g.name}</h3>
+                <p class="game-desc">${desc}</p>
+                <div class="game-footer">
+                    <div></div>
+                    <div class="game-actions-row">
+                        ${g.discord_url?`<a href="${g.discord_url}" target="_blank" class="btn-discord-sm"><i class="fab fa-discord"></i></a>`:''}
+                        <a href="${g.game_link||'#'}" target="_blank" class="btn-game-play" data-pt="Jogar" data-en="Play">${currentLang==='en'?'Play':'Jogar'}</a>
+                    </div>
+                </div>
+            </div>`;
+        grid.appendChild(div);
+    });
+    initTilt('.game-card');
+    observeReveal();
+}
+
+// ── TEAM ─────────────────────────────────────────────────
+let teamData = [];
+async function loadTeam() {
+    const { data } = await sb.from('team_members').select('*').order('sort_order');
+    teamData = data || [];
+    renderTeam();
+}
+function renderTeam() {
+    const track=$('team-track'); if(!track) return;
+    if(!teamData.length){ track.innerHTML='<p style="color:rgba(255,255,255,.3);padding:2rem">Nenhum membro cadastrado.</p>'; return; }
+    track.innerHTML='';
+    teamData.forEach(m=>{
+        const role=currentLang==='en'&&m.role_en?m.role_en:m.role_pt||'';
+        const div=document.createElement('div'); div.className='team-card';
+        div.innerHTML=`<img src="${m.image_url||''}" alt="${m.name}" class="team-avatar" onerror="this.src='${avatar(m.name)}'"><h3 class="team-name">${m.name}</h3><p class="team-role">${role}</p><a href="${m.roblox_url||'#'}" target="_blank" class="team-link"><i class="fas fa-external-link-alt"></i> Roblox</a>`;
+        track.appendChild(div);
+    });
+    initTilt('.team-card');
+}
+
+// ── Init data load ────────────────────────────────────────
+Promise.all([loadSlides(), loadGames(), loadTeam()]).then(() => startCarTimer());
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN AUTH
+// ═══════════════════════════════════════════════════════════
+function closeModal(id){ $(id).classList.remove('open'); }
+function openModal(id){ $(id).classList.add('open'); }
+
+// Check session on load
+sb.auth.getSession().then(({data:{session}}) => {
+    if (session) {
+        $('fab-icon').className = 'fas fa-cog';
+    }
+});
+
+// Auth state listener
+sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN') {
+        closeModal('modal-login');
+        openAdminPanel();
+    }
+    if (event === 'SIGNED_OUT') {
+        closeModal('modal-panel');
+    }
+});
+
+$('admin-fab').addEventListener('click', async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) { openAdminPanel(); }
+    else { openModal('modal-login'); setTimeout(()=>$('adm-email').focus(),100); }
+});
+
+async function doLogin() {
+    const email=$('adm-email').value.trim(), pass=$('adm-pass').value;
+    if(!email||!pass){ $('login-err').textContent='Preencha e-mail e senha.'; $('login-err').style.display='block'; return; }
+    setBtn('login-btn',true,'Entrando...');
+    const {error} = await sb.auth.signInWithPassword({email, password:pass});
+    setBtn('login-btn',false,'ENTRAR');
+    if(error){ $('login-err').textContent='Credenciais inválidas.'; $('login-err').style.display='block'; }
+    else { $('login-err').style.display='none'; $('adm-pass').value=''; }
+}
+
+async function doLogout() {
+    await sb.auth.signOut();
+}
+
+function switchTab(name, btn) {
+    document.querySelectorAll('.a-tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.a-tab-content').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    $('tab-'+name).classList.add('active');
+    if(name==='carousel') renderAdminSlides();
+    if(name==='games') renderAdminGames();
+    if(name==='team') renderAdminTeam();
+}
+
+function openAdminPanel() {
+    openModal('modal-panel');
+    renderAdminSlides();
+    renderAdminGames();
+    renderAdminTeam();
+}
+
+// close on backdrop
+['modal-login','modal-panel'].forEach(id => {
+    $(id).addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(id); });
+});
+document.addEventListener('keydown', e => { if(e.key==='Escape'){ closeModal('modal-login'); closeModal('modal-panel'); } });
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN — CAROUSEL
+// ═══════════════════════════════════════════════════════════
+function renderAdminSlides() {
+    const list=$('admin-slides-list');
+    if(!slidesData.length){ list.innerHTML='<div class="a-empty"><i class="fas fa-images"></i>Nenhum slide cadastrado</div>'; return; }
+    list.innerHTML='';
+    slidesData.forEach(s=>{
+        const d=document.createElement('div'); d.className='a-item';
+        d.innerHTML=`${s.type==='video'?`<video src="${s.url}" class="a-item-thumb" muted></video>`:`<img src="${s.url}" class="a-item-thumb" onerror="this.style.opacity=.2">`}
+            <div class="a-item-info"><strong>${s.title||'Sem título'}</strong><span>${s.subtitle||''} · ${s.type}</span></div>
+            <div class="a-item-actions"><button class="a-icon-btn del" onclick="deleteSlide('${s.id}')" title="Remover"><i class="fas fa-trash"></i></button></div>`;
+        list.appendChild(d);
+    });
+}
+
+function handleSlideFileSelect(input) {
+    const file=input.files[0]; if(!file) return;
+    pendingSlideUrl=''; // will be set after upload
+    const isVideo=file.type.startsWith('video/');
+    $('new-slide-type').value=isVideo?'video':'image';
+    if(!isVideo){
+        const preview=$('slide-preview');
+        preview.src=URL.createObjectURL(file); preview.classList.add('show');
+    }
+}
+
+async function uploadFile(bucket, file, progressBarId, progressId) {
+    const ext=file.name.split('.').pop();
+    const path=`${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    $(progressId).classList.add('show');
+    const bar=$(progressBarId);
+    // Simulate progress
+    let prog=0; const t=setInterval(()=>{ prog=Math.min(prog+10,85); bar.style.width=prog+'%'; },100);
+    const {data,error} = await sb.storage.from(bucket).upload(path, file, {cacheControl:'3600',upsert:false});
+    clearInterval(t); bar.style.width='100%';
+    setTimeout(()=>{ $(progressId).classList.remove('show'); bar.style.width='0%'; },600);
+    if(error) throw error;
+    const { data:{publicUrl} } = sb.storage.from(bucket).getPublicUrl(path);
+    return publicUrl;
+}
+
+async function addSlide() {
+    setBtn('btn-add-slide',true,'Salvando...');
+    try {
+        const fileInput=$('slide-file-input');
+        let url=$('new-slide-url').value.trim();
+        if(fileInput.files[0]) {
+            url = await uploadFile('slides', fileInput.files[0], 'slide-progress-bar', 'slide-progress');
+        }
+        if(!url){ showMsg('slide-msg','Informe uma URL ou faça upload de um arquivo.',true); setBtn('btn-add-slide',false,'ADICIONAR SLIDE'); return; }
+        const {error} = await sb.from('slides').insert({
+            title:$('new-slide-title').value.trim()||'Slide',
+            subtitle:$('new-slide-sub').value.trim(),
+            url, type:$('new-slide-type').value,
+            sort_order: slidesData.length+1
+        });
+        if(error) throw error;
+        showMsg('slide-msg','✓ Slide adicionado!');
+        ['new-slide-title','new-slide-sub','new-slide-url'].forEach(id=>$(id).value='');
+        fileInput.value=''; $('slide-preview').classList.remove('show');
+        await loadSlides(); renderAdminSlides();
+    } catch(e){ showMsg('slide-msg','Erro: '+e.message,true); }
+    setBtn('btn-add-slide',false,'ADICIONAR SLIDE');
+}
+
+async function deleteSlide(id) {
+    if(!confirm('Remover este slide?')) return;
+    await sb.from('slides').delete().eq('id',id);
+    await loadSlides(); renderAdminSlides();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN — GAMES
+// ═══════════════════════════════════════════════════════════
+function renderAdminGames() {
+    const list=$('admin-games-list');
+    if(!gamesData.length){ list.innerHTML='<div class="a-empty"><i class="fas fa-gamepad"></i>Nenhum jogo cadastrado</div>'; return; }
+    list.innerHTML='';
+    gamesData.forEach(g=>{
+        const d=document.createElement('div'); d.className='a-item';
+        d.innerHTML=`${g.media_type==='video'?`<video src="${g.image_url}" class="a-item-thumb" muted></video>`:`<img src="${g.image_url||''}" class="a-item-thumb" onerror="this.style.opacity=.2">`}
+            <div class="a-item-info"><strong>${g.name}</strong><span>${g.status}</span></div>
+            <div class="a-item-actions"><button class="a-icon-btn del" onclick="deleteGame('${g.id}')" title="Remover"><i class="fas fa-trash"></i></button></div>`;
+        list.appendChild(d);
+    });
+}
+
+function handleGameFileSelect(input) {
+    const file=input.files[0]; if(!file) return;
+    const isVideo=file.type.startsWith('video/');
+    $('new-game-media-type').value=isVideo?'video':'image';
+    if(!isVideo){ const p=$('game-preview'); p.src=URL.createObjectURL(file); p.classList.add('show'); }
+}
+
+async function addGame() {
+    setBtn('btn-add-game',true,'Salvando...');
+    try {
+        const fileInput=$('game-file-input');
+        let img=$('new-game-img').value.trim();
+        if(fileInput.files[0]) {
+            img = await uploadFile('games', fileInput.files[0], 'game-progress-bar', 'game-progress');
+        }
+        const name=$('new-game-name').value.trim();
+        if(!name){ showMsg('game-msg','Nome é obrigatório.',true); setBtn('btn-add-game',false,'ADICIONAR JOGO'); return; }
+        const {error} = await sb.from('games').insert({
+            name, desc_pt:$('new-game-desc-pt').value.trim(), desc_en:$('new-game-desc-en').value.trim(),
+            image_url:img, media_type:$('new-game-media-type').value,
+            game_link:$('new-game-link').value.trim()||'#',
+            discord_url:$('new-game-discord').value.trim(),
+            status:$('new-game-status').value, sort_order:gamesData.length+1
+        });
+        if(error) throw error;
+        showMsg('game-msg','✓ Jogo adicionado!');
+        ['new-game-name','new-game-desc-pt','new-game-desc-en','new-game-img','new-game-link','new-game-discord'].forEach(id=>$(id).value='');
+        fileInput.value=''; $('game-preview').classList.remove('show');
+        await loadGames(); renderAdminGames();
+    } catch(e){ showMsg('game-msg','Erro: '+e.message,true); }
+    setBtn('btn-add-game',false,'ADICIONAR JOGO');
+}
+
+async function deleteGame(id) {
+    if(!confirm('Remover este jogo?')) return;
+    await sb.from('games').delete().eq('id',id);
+    await loadGames(); renderAdminGames();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN — TEAM
+// ═══════════════════════════════════════════════════════════
+function renderAdminTeam() {
+    const list=$('admin-team-list');
+    if(!teamData.length){ list.innerHTML='<div class="a-empty"><i class="fas fa-users"></i>Nenhum membro cadastrado</div>'; return; }
+    list.innerHTML='';
+    teamData.forEach(m=>{
+        const d=document.createElement('div'); d.className='a-item';
+        d.innerHTML=`<img src="${m.image_url||''}" class="a-item-thumb-sm" onerror="this.src='${avatar(m.name)}'">
+            <div class="a-item-info"><strong>${m.name}</strong><span>${m.role_pt||''}</span></div>
+            <div class="a-item-actions"><button class="a-icon-btn del" onclick="deleteMember('${m.id}')" title="Remover"><i class="fas fa-trash"></i></button></div>`;
+        list.appendChild(d);
+    });
+}
+
+function handleMemberFileSelect(input) {
+    const file=input.files[0]; if(!file) return;
+    const p=$('member-preview'); p.src=URL.createObjectURL(file); p.classList.add('show');
+}
+
+async function addMember() {
+    setBtn('btn-add-member',true,'Salvando...');
+    try {
+        const fileInput=$('member-file-input');
+        let img=$('new-member-img').value.trim();
+        if(fileInput.files[0]) {
+            img = await uploadFile('team', fileInput.files[0], 'member-progress-bar', 'member-progress');
+        }
+        const name=$('new-member-name').value.trim();
+        if(!name){ showMsg('member-msg','Nome é obrigatório.',true); setBtn('btn-add-member',false,'ADICIONAR MEMBRO'); return; }
+        const {error} = await sb.from('team_members').insert({
+            name, role_pt:$('new-member-role-pt').value.trim(), role_en:$('new-member-role-en').value.trim(),
+            image_url:img, roblox_url:$('new-member-roblox').value.trim()||'#',
+            sort_order:teamData.length+1
+        });
+        if(error) throw error;
+        showMsg('member-msg','✓ Membro adicionado!');
+        ['new-member-name','new-member-role-pt','new-member-role-en','new-member-img','new-member-roblox'].forEach(id=>$(id).value='');
+        fileInput.value=''; $('member-preview').classList.remove('show');
+        await loadTeam(); renderAdminTeam();
+    } catch(e){ showMsg('member-msg','Erro: '+e.message,true); }
+    setBtn('btn-add-member',false,'ADICIONAR MEMBRO');
+}
+
+async function deleteMember(id) {
+    if(!confirm('Remover este membro?')) return;
+    await sb.from('team_members').delete().eq('id',id);
+    await loadTeam(); renderAdminTeam();
+}
+
+// ── GSAP ─────────────────────────────────────────────────
+if(typeof gsap!=='undefined'&&typeof ScrollTrigger!=='undefined'){
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.from('.hero-title',{duration:1.1,y:50,opacity:0,ease:'power3.out',delay:.3});
+    gsap.from('.hero-subtitle',{duration:1,y:30,opacity:0,ease:'power3.out',delay:.55});
+    gsap.from('.hero-btns',{duration:.9,y:20,opacity:0,ease:'power3.out',delay:.8});
+    gsap.from('.stat-card',{scrollTrigger:{trigger:'.stats-section',start:'top 80%'},duration:.7,y:40,opacity:0,stagger:.15,ease:'power3.out'});
+}
+
+console.log('%c NeoX Studio %c v2.1 · Supabase ','background:#00e5ff;color:#000;font-weight:bold;padding:4px 8px;border-radius:4px 0 0 4px','background:#ff0055;color:#fff;font-weight:bold;padding:4px 8px;border-radius:0 4px 4px 0');
+</script>
+<script src="script/main.js"></script>
+</body>
+</html>
