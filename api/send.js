@@ -1,5 +1,4 @@
 // api/send.js — Contact form handler (Node/Express or Vercel Edge)
-// Drop-in compatible with the original send.js
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -12,7 +11,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid payload' });
     }
 
-    // ── Replace with your webhook / email service ──
     const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || '';
 
     if (DISCORD_WEBHOOK) {
