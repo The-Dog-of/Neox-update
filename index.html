@@ -6,7 +6,7 @@
     <title>NeoX Studio | Play the Future</title>
     <meta name="description" content="NeoX was born to break the monotony. We create digital amusement parks where every pixel is designed to make you smile.">
     <meta name="theme-color" content="#00e5ff">
-    <link rel="icon" type="image/png" href="assets/NeoX.png">
+    <link rel="icon" type="image/png" href="https://yajrjspyrbkhiijttixn.supabase.co/storage/v1/object/public/games/NeoX.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -49,7 +49,7 @@ body.loaded #preloader { opacity: 0; pointer-events: none; }
 .reveal { opacity:0; transform:translateY(30px); transition:opacity .8s,transform .8s; }
 .reveal.visible { opacity:1; transform:translateY(0); }
 .reveal-delay-1{transition-delay:.1s} .reveal-delay-2{transition-delay:.2s} .reveal-delay-3{transition-delay:.35s}
-.hero-title, .hero-subtitle, .hero-btns, .hero-badge { opacity:1; transform:none; } /* GSAP override */
+.hero-title, .hero-subtitle, .hero-btns, .hero-badge { opacity:1; transform:none; }
 
 /* ===================== NAV ===================== */
 header { position:fixed; top:0; left:0; right:0; z-index:1000; padding:0 2rem; }
@@ -183,7 +183,24 @@ nav { max-width:1200px; margin:1.2rem auto 0; background:rgba(5,5,15,.7); backdr
 .team-scroll-wrap::before,.team-scroll-wrap::after { content:''; position:absolute; top:0; bottom:0; width:100px; z-index:3; pointer-events:none; }
 .team-scroll-wrap::before { left:0; background:linear-gradient(to right,var(--dark),transparent); }
 .team-scroll-wrap::after { right:0; background:linear-gradient(to left,var(--dark),transparent); }
-.team-track { display:flex; gap:1.5rem; padding:1rem 2rem; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; cursor:grab; }
+
+/* --- FIX DE ALINHAMENTO CENTRAL --- */
+.team-track { 
+    display:flex; 
+    gap:1.5rem; 
+    padding:1rem 2rem; 
+    overflow-x:auto; 
+    scroll-snap-type:x mandatory; 
+    -webkit-overflow-scrolling:touch; 
+    scrollbar-width:none; 
+    cursor:grab; 
+    
+    /* Centralização Dinâmica */
+    width: max-content;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
 .team-track::-webkit-scrollbar { display:none; }
 .team-track.dragging { cursor:grabbing; }
 .team-card { flex-shrink:0; width:180px; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:1.5rem 1rem; text-align:center; scroll-snap-align:start; transition:transform .3s,border-color .3s; }
@@ -505,7 +522,7 @@ footer p { color:var(--muted); font-size:.85rem; }
 <header>
     <nav id="main-nav">
         <a href="#home" class="nav-logo">
-            <img src="assets/NeoX.png" alt="NeoX" onerror="this.style.display='none'">
+            <img src="https://yajrjspyrbkhiijttixn.supabase.co/storage/v1/object/public/games/NeoX.png" alt="NeoX" onerror="this.style.display='none'">
             <span id="logo-text">NeoX</span>
         </a>
         <ul class="nav-links" id="nav-links">
@@ -542,7 +559,7 @@ footer p { color:var(--muted); font-size:.85rem; }
             <div class="hero-logo-ring">
                 <div class="hero-ring-dot"></div>
                 <div class="hero-ring-dot"></div>
-                <img src="assets/NeoX.png" alt="NeoX" class="hero-logo-img"
+                <img src="https://yajrjspyrbkhiijttixn.supabase.co/storage/v1/object/public/games/NeoX.png" alt="NeoX" class="hero-logo-img"
                     onerror="this.style.display='none';document.getElementById('hero-logo-fallback').style.display='flex'">
                 <div id="hero-logo-fallback" style="display:none;position:absolute;width:160px;height:160px;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:3.5rem;font-weight:900;background:linear-gradient(135deg,#00e5ff,#ff0055);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 30px rgba(0,229,255,.5));z-index:1;">NX</div>
             </div>
@@ -757,7 +774,7 @@ document.querySelectorAll('.counter').forEach(c => {
 (function(){
     const g=$('mosaic-grid');
     if(!g) return;
-    for(let i=0;i<25;i++){
+    for(let i=0;i<17;i++){
         const d=document.createElement('div'); d.className='mosaic-block';
         if(i===12){d.className='mosaic-block mosaic-center';d.textContent='NX';}
         g.appendChild(d);
